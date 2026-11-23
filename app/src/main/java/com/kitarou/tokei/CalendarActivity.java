@@ -142,14 +142,14 @@ public class CalendarActivity extends Activity {
         bar.addView(ampmV);
 
         clockV = new TextView(this);
-        clockV.setTextSize(46);
+        clockV.setTextSize(40);
         clockV.setTextColor(Color.WHITE);
         clockV.setTypeface(mincho);
         clockV.setFontFeatureSettings("hwid");
         clockV.setSingleLine(true);
         clockV.setIncludeFontPadding(false);
         clockV.setGravity(Gravity.CENTER_VERTICAL);
-        clockV.setAutoSizeTextTypeUniformWithConfiguration(18, 46, 1, android.util.TypedValue.COMPLEX_UNIT_SP);
+        clockV.setAutoSizeTextTypeUniformWithConfiguration(18, 40, 1, android.util.TypedValue.COMPLEX_UNIT_SP);
         bar.addView(clockV, new LinearLayout.LayoutParams(0, dp(60), 1));
 
         modeB = pillButton();
@@ -209,8 +209,7 @@ public class CalendarActivity extends Activity {
         } else {
             shownH = hh % 12;
             if (shownH == 0) shownH = 12;
-            ampmV.setText(hh < 12 ? "午前" : "午後");
-            ampmV.setVisibility(View.VISIBLE);
+            ampmV.setVisibility(View.GONE);
         }
         clockV.setText(String.format(Locale.US, "%d:%02d:%02d", shownH, c.get(Calendar.MINUTE), c.get(Calendar.SECOND)));
         modeB.setText(is24 ? "24h" : "12h");
