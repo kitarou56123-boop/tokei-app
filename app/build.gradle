@@ -1,0 +1,44 @@
+plugins {
+    id 'com.android.application'
+}
+
+def runNo = (System.getenv('RUN_NUMBER') ?: '1') as int
+
+android {
+    namespace 'com.kitarou.tokei'
+    compileSdk 35
+
+    defaultConfig {
+        applicationId 'com.kitarou.tokei'
+        minSdk 26
+        targetSdk 34
+        versionCode runNo
+        versionName "1.0.${runNo}"
+    }
+
+    signingConfigs {
+        release {
+            storeFile file('tokei.keystore')
+            storePassword 'tokeiapp'
+            keyAlias 'tokei'
+            keyPassword 'tokeiapp'
+        }
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+            signingConfig signingConfigs.release
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+
+    lint {
+        abortOnError false
+        checkReleaseBuilds false
+    }
+}
