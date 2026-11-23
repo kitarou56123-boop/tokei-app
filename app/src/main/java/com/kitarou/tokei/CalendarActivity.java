@@ -71,9 +71,8 @@ public class CalendarActivity extends Activity {
         super.onCreate(b);
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
         getWindow().setStatusBarColor(Color.WHITE);
-        getWindow().setNavigationBarColor(Color.WHITE);
-        getWindow().getDecorView().setSystemUiVisibility(
-                View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR | View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR);
+        getWindow().setNavigationBarColor(0xFF1A2342);
+        getWindow().getDecorView().setSystemUiVisibility(View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR);
 
         LinearLayout root = new LinearLayout(this);
         root.setOrientation(LinearLayout.VERTICAL);
@@ -121,37 +120,40 @@ public class CalendarActivity extends Activity {
         root.addView(grid, new LinearLayout.LayoutParams(-1, 0, 1));
 
         // 下：秒まで出る時計と 24時間切替
-        View top = new View(this);
-        top.setBackgroundColor(LINE);
-        root.addView(top, new LinearLayout.LayoutParams(-1, 1));
         LinearLayout bar = new LinearLayout(this);
         bar.setOrientation(LinearLayout.HORIZONTAL);
         bar.setGravity(Gravity.CENTER_VERTICAL);
-        bar.setBackgroundColor(0xFFF7F7F7);
+        bar.setBackgroundColor(0xFF1A2342);
         bar.setPadding(dp(16), dp(8), dp(12), dp(10));
+        Typeface mincho = Typeface.SERIF;
+        try {
+            mincho = getResources().getFont(R.font.mincho);
+        } catch (Exception ignored) {
+        }
 
         ampmV = new TextView(this);
         ampmV.setTextSize(16);
-        ampmV.setTextColor(0xFF666666);
+        ampmV.setTextColor(0xFFD8DEF0);
+        ampmV.setTypeface(mincho);
         ampmV.setPadding(0, 0, dp(6), 0);
         bar.addView(ampmV);
 
         clockV = new TextView(this);
         clockV.setTextSize(46);
-        clockV.setTextColor(0xFF222222);
-        clockV.setTypeface(Typeface.create("sans-serif-light", Typeface.NORMAL));
-        clockV.setFontFeatureSettings("tnum");
+        clockV.setTextColor(Color.WHITE);
+        clockV.setTypeface(mincho);
+        clockV.setFontFeatureSettings("hwid");
         clockV.setSingleLine(true);
         clockV.setIncludeFontPadding(false);
         bar.addView(clockV, new LinearLayout.LayoutParams(0, -2, 1));
 
         modeB = new TextView(this);
         modeB.setTextSize(15);
-        modeB.setTextColor(TEXT);
+        modeB.setTextColor(Color.WHITE);
         modeB.setGravity(Gravity.CENTER);
         GradientDrawable mbg = new GradientDrawable();
-        mbg.setColor(Color.WHITE);
-        mbg.setStroke(dp(1), 0xFFBBBBBB);
+        mbg.setColor(0xFF2A3560);
+        mbg.setStroke(dp(1), 0xFF8C98C0);
         mbg.setCornerRadius(dp(24));
         modeB.setBackground(mbg);
         modeB.setOnClickListener(v -> {

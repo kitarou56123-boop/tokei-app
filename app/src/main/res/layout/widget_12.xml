@@ -8,6 +8,8 @@
     android:orientation="vertical">
 
     <TextClock
+        android:id="@+id/date"
+        android:fontFamily="@font/mincho"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:format12Hour="M月d日(E)"
@@ -19,12 +21,13 @@
         android:shadowRadius="6" />
 
     <TextClock
+        android:id="@+id/time"
+        android:fontFamily="@font/mincho"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:format12Hour="h:mm"
         android:format24Hour="h:mm"
-        android:fontFamily="sans-serif-light"
-        android:includeFontPadding="false"
+                android:includeFontPadding="false"
         android:textColor="#FFE6ECFF"
         android:textSize="72sp"
         android:shadowColor="#AA000000"
