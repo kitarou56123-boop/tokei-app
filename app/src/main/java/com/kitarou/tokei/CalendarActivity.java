@@ -51,7 +51,8 @@ public class CalendarActivity extends Activity {
     private LinearLayout grid;
     private GestureDetector gd;
     private boolean flung;
-    private TextView ampmV, clockV, modeB;
+    private TextView ampmV, clockV, modeB, viewB;
+    private boolean yearMode = false;
     private final Handler h = new Handler(Looper.getMainLooper());
     private final Runnable tick = new Runnable() {
         @Override
@@ -93,8 +94,8 @@ public class CalendarActivity extends Activity {
         todayB.setTextColor(RED);
         todayB.setLayoutParams(new LinearLayout.LayoutParams(dp(64), dp(48)));
         head.addView(todayB);
-        head.addView(navButton("◀", v -> { shown = shown.minusMonths(1); render(); }));
-        head.addView(navButton("▶", v -> { shown = shown.plusMonths(1); render(); }));
+        head.addView(navButton("◀", v -> { shown = shown.minusMonths(yearMode ? 12 : 1); render(); }));
+        head.addView(navButton("▶", v -> { shown = shown.plusMonths(yearMode ? 12 : 1); render(); }));
         root.addView(head);
 
         // 曜日
@@ -124,7 +125,7 @@ public class CalendarActivity extends Activity {
         bar.setOrientation(LinearLayout.HORIZONTAL);
         bar.setGravity(Gravity.CENTER_VERTICAL);
         bar.setBackgroundColor(0xFF1A2342);
-        bar.setPadding(dp(16), dp(8), dp(12), dp(10));
+        bar.setPadding(dp(12), dp(8), dp(8), dp(10));
         Typeface mincho = Typeface.SERIF;
         try {
             mincho = getResources().getFont(R.font.mincho);
@@ -132,7 +133,7 @@ public class CalendarActivity extends Activity {
         }
 
         ampmV = new TextView(this);
-        ampmV.setTextSize(16);
+        ampmV.setTextSize(14);
         ampmV.setTextColor(0xFFD8DEF0);
         ampmV.setTypeface(mincho);
         ampmV.setPadding(0, 0, dp(6), 0);
@@ -145,23 +146,28 @@ public class CalendarActivity extends Activity {
         clockV.setFontFeatureSettings("hwid");
         clockV.setSingleLine(true);
         clockV.setIncludeFontPadding(false);
-        bar.addView(clockV, new LinearLayout.LayoutParams(0, -2, 1));
+        clockV.setGravity(Gravity.CENTER_VERTICAL);
+        clockV.setAutoSizeTextTypeUniformWithConfiguration(18, 46, 1, android.util.TypedValue.COMPLEX_UNIT_SP);
+        bar.addView(clockV, new LinearLayout.LayoutParams(0, dp(60), 1));
 
-        modeB = new TextView(this);
-        modeB.setTextSize(15);
-        modeB.setTextColor(Color.WHITE);
-        modeB.setGravity(Gravity.CENTER);
-        GradientDrawable mbg = new GradientDrawable();
-        mbg.setColor(0xFF2A3560);
-        mbg.setStroke(dp(1), 0xFF8C98C0);
-        mbg.setCornerRadius(dp(24));
-        modeB.setBackground(mbg);
+        modeB = pillButton();
         modeB.setOnClickListener(v -> {
             Prefs.set24(this, !Prefs.is24(this));
             ClockWidget.updateAll(this);
             updateClock();
         });
-        bar.addView(modeB, new LinearLayout.LayoutParams(dp(112), dp(48)));
+        LinearLayout.LayoutParams blp = new LinearLayout.LayoutParams(dp(64), dp(46));
+        blp.leftMargin = dp(6);
+        bar.addView(modeB, blp);
+
+        viewB = pillButton();
+        viewB.setOnClickListener(v -> {
+            yearMode = !yearMode;
+            render();
+        });
+        LinearLayout.LayoutParams blp2 = new LinearLayout.LayoutParams(dp(72), dp(46));
+        blp2.leftMargin = dp(6);
+        bar.addView(viewB, blp2);
         root.addView(bar);
 
         setContentView(root);
@@ -172,7 +178,8 @@ public class CalendarActivity extends Activity {
                 if (e1 == null) return false;
                 float dx = e2.getX() - e1.getX(), dy = e2.getY() - e1.getY();
                 if (Math.abs(dx) > dp(80) && Math.abs(dx) > Math.abs(dy) * 1.5f) {
-                    shown = dx < 0 ? shown.plusMonths(1) : shown.minusMonths(1);
+                    int step = yearMode ? 12 : 1;
+                    shown = dx < 0 ? shown.plusMonths(step) : shown.minusMonths(step);
                     render();
                     flung = true;
                     return true;
@@ -204,7 +211,7 @@ public class CalendarActivity extends Activity {
             ampmV.setVisibility(View.VISIBLE);
         }
         clockV.setText(String.format(Locale.US, "%d:%02d:%02d", shownH, c.get(Calendar.MINUTE), c.get(Calendar.SECOND)));
-        modeB.setText(is24 ? "24時間表示" : "12時間表示");
+        modeB.setText(is24 ? "24h" : "12h");
     }
 
     @Override
@@ -282,7 +289,28 @@ public class CalendarActivity extends Activity {
         return t;
     }
 
+    private TextView pillButton() {
+        TextView t = new TextView(this);
+        t.setTextSize(15);
+        t.setTextColor(Color.WHITE);
+        t.setGravity(Gravity.CENTER);
+        t.setSingleLine(true);
+        GradientDrawable bg = new GradientDrawable();
+        bg.setColor(0xFF2A3560);
+        bg.setStroke(dp(1), 0xFF8C98C0);
+        bg.setCornerRadius(dp(23));
+        t.setBackground(bg);
+        return t;
+    }
+
     private void render() {
+        if (viewB != null) viewB.setText(yearMode ? "月表示" : "年表示");
+        if (yearMode) {
+            renderYear();
+            return;
+        }
+        grid.setBackgroundColor(LINE);
+        grid.setPadding(1, 1, 0, 0);
         titleV.setText(shown.getYear() + "年" + shown.getMonthValue() + "月");
         grid.removeAllViews();
         LocalDate first = shown.atDay(1);
@@ -305,6 +333,124 @@ public class CalendarActivity extends Activity {
                 row.addView(cell(d, today, events.get(d.toString())), clp);
             }
         }
+    }
+
+    // ---- 1年表示（銀行のカレンダー風） ----
+    private void renderYear() {
+        int y = shown.getYear();
+        titleV.setText(y + "年");
+        grid.removeAllViews();
+        grid.setBackgroundColor(Color.WHITE);
+        grid.setPadding(dp(3), dp(3), dp(3), dp(3));
+        LocalDate today = LocalDate.now();
+        Map<String, List<EventStore.Ev>> events = EventStore.byDate(this);
+        for (int r = 0; r < 4; r++) {
+            LinearLayout row = new LinearLayout(this);
+            row.setOrientation(LinearLayout.HORIZONTAL);
+            LinearLayout.LayoutParams rlp = new LinearLayout.LayoutParams(-1, 0, 1);
+            rlp.bottomMargin = dp(3);
+            grid.addView(row, rlp);
+            for (int c = 0; c < 3; c++) {
+                LinearLayout.LayoutParams mlp = new LinearLayout.LayoutParams(0, -1, 1);
+                mlp.leftMargin = c == 0 ? 0 : dp(3);
+                row.addView(monthBlock(YearMonth.of(y, r * 3 + c + 1), today, events), mlp);
+            }
+        }
+    }
+
+    private View monthBlock(YearMonth ym, LocalDate today, Map<String, List<EventStore.Ev>> events) {
+        boolean thisMonth = ym.equals(YearMonth.from(today));
+        LinearLayout box = new LinearLayout(this);
+        box.setOrientation(LinearLayout.VERTICAL);
+        GradientDrawable frame = new GradientDrawable();
+        frame.setColor(LINE);
+        frame.setStroke(1, 0xFF969696);
+        box.setBackground(frame);
+        box.setPadding(1, 1, 1, 1);
+
+        TextView title = new TextView(this);
+        title.setText(ym.getMonthValue() + "月");
+        title.setTextSize(13);
+        title.setTypeface(Typeface.DEFAULT_BOLD);
+        title.setGravity(Gravity.CENTER);
+        title.setTextColor(thisMonth ? RED : TEXT);
+        title.setBackgroundColor(thisMonth ? 0xFFFDECEC : 0xFFF6F6F6);
+        title.setIncludeFontPadding(false);
+        title.setPadding(0, dp(2), 0, dp(2));
+        title.setOnClickListener(v -> {
+            shown = ym;
+            yearMode = false;
+            render();
+        });
+        LinearLayout.LayoutParams tlp = new LinearLayout.LayoutParams(-1, -2);
+        tlp.bottomMargin = 1;
+        box.addView(title, tlp);
+
+        LinearLayout wk = new LinearLayout(this);
+        wk.setOrientation(LinearLayout.HORIZONTAL);
+        wk.setBackgroundColor(Color.WHITE);
+        String[] names = {"日", "月", "火", "水", "木", "金", "土"};
+        for (int i = 0; i < 7; i++) {
+            TextView t = new TextView(this);
+            t.setText(names[i]);
+            t.setTextSize(8);
+            t.setGravity(Gravity.CENTER);
+            t.setIncludeFontPadding(false);
+            t.setTextColor(i == 0 ? RED : i == 6 ? BLUE : 0xFF787878);
+            wk.addView(t, new LinearLayout.LayoutParams(0, -2, 1));
+        }
+        LinearLayout.LayoutParams wlp = new LinearLayout.LayoutParams(-1, -2);
+        wlp.bottomMargin = 1;
+        box.addView(wk, wlp);
+
+        LocalDate first = ym.atDay(1);
+        int offset = first.getDayOfWeek().getValue() % 7;
+        int len = ym.lengthOfMonth();
+        for (int r = 0; r < 6; r++) {
+            LinearLayout row = new LinearLayout(this);
+            row.setOrientation(LinearLayout.HORIZONTAL);
+            LinearLayout.LayoutParams rlp = new LinearLayout.LayoutParams(-1, 0, 1);
+            if (r < 5) rlp.bottomMargin = 1;
+            box.addView(row, rlp);
+            for (int c = 0; c < 7; c++) {
+                int day = r * 7 + c - offset + 1;
+                LinearLayout cell = new LinearLayout(this);
+                cell.setOrientation(LinearLayout.VERTICAL);
+                cell.setGravity(Gravity.CENTER);
+                cell.setBackgroundColor(Color.WHITE);
+                LinearLayout.LayoutParams clp = new LinearLayout.LayoutParams(0, -1, 1);
+                if (c < 6) clp.rightMargin = 1;
+                row.addView(cell, clp);
+                if (day < 1 || day > len) continue;
+                LocalDate d = ym.atDay(day);
+                boolean isToday = d.equals(today);
+                TextView num = new TextView(this);
+                num.setText(String.valueOf(day));
+                num.setTextSize(10);
+                num.setIncludeFontPadding(false);
+                num.setGravity(Gravity.CENTER);
+                int col = (d.getDayOfWeek() == DayOfWeek.SUNDAY || Holidays.name(d) != null) ? RED
+                        : d.getDayOfWeek() == DayOfWeek.SATURDAY ? BLUE : TEXT;
+                if (isToday) {
+                    cell.setBackgroundColor(RED);
+                    col = Color.WHITE;
+                    num.setTypeface(Typeface.DEFAULT_BOLD);
+                }
+                num.setTextColor(col);
+                cell.addView(num);
+                View dot = new View(this);
+                GradientDrawable dg = new GradientDrawable();
+                dg.setShape(GradientDrawable.OVAL);
+                dg.setColor(isToday ? Color.WHITE : 0xFF1A56C4);
+                dot.setBackground(dg);
+                dot.setVisibility(events.containsKey(d.toString()) ? View.VISIBLE : View.INVISIBLE);
+                LinearLayout.LayoutParams dlp = new LinearLayout.LayoutParams(dp(4), dp(4));
+                dlp.topMargin = dp(1);
+                cell.addView(dot, dlp);
+                cell.setOnClickListener(v -> showDay(d));
+            }
+        }
+        return box;
     }
 
     private View cell(LocalDate d, LocalDate today, List<EventStore.Ev> evs) {
