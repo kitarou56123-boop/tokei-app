@@ -481,6 +481,16 @@ public class CalendarActivity extends Activity {
         num.setTextColor(col);
         cell.addView(num);
 
+        String rk = Rokuyo.name(d);
+        if (rk != null) {
+            TextView rv = new TextView(this);
+            rv.setText(rk);
+            rv.setTextSize(10);
+            rv.setTextColor(0xFF888888);
+            rv.setIncludeFontPadding(false);
+            cell.addView(rv);
+        }
+
         if (hol != null) cell.addView(label(hol, Color.WHITE, GREEN));
         if (evs != null) {
             for (EventStore.Ev e : evs) cell.addView(label(e.text, 0xFF1A56C4, 0xFFE3ECFD));
@@ -571,7 +581,9 @@ public class CalendarActivity extends Activity {
         sv.addView(box);
 
         holder[0] = new AlertDialog.Builder(this)
-                .setTitle(d.format(DAY_FMT) + (hol != null ? "　" + hol : ""))
+                .setTitle(d.format(DAY_FMT)
+                        + (Rokuyo.name(d) != null ? "　" + Rokuyo.name(d) : "")
+                        + (hol != null ? "　" + hol : ""))
                 .setView(sv)
                 .setPositiveButton("予定を追加", (x, y) -> showEdit(null, d))
                 .setNegativeButton("閉じる", null)
