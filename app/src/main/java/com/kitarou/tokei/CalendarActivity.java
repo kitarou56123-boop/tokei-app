@@ -53,6 +53,7 @@ public class CalendarActivity extends Activity {
     private boolean flung;
     private TextView ampmV, clockV, modeB, viewB;
     private boolean yearMode = false;
+    private View weekRow;
     private final Handler h = new Handler(Looper.getMainLooper());
     private final Runnable tick = new Runnable() {
         @Override
@@ -113,6 +114,7 @@ public class CalendarActivity extends Activity {
             wk.addView(t, new LinearLayout.LayoutParams(0, -2, 1));
         }
         root.addView(wk);
+        weekRow = wk;
 
         grid = new LinearLayout(this);
         grid.setOrientation(LinearLayout.VERTICAL);
@@ -305,6 +307,7 @@ public class CalendarActivity extends Activity {
 
     private void render() {
         if (viewB != null) viewB.setText(yearMode ? "月表示" : "年表示");
+        if (weekRow != null) weekRow.setVisibility(yearMode ? View.GONE : View.VISIBLE);
         if (yearMode) {
             renderYear();
             return;
