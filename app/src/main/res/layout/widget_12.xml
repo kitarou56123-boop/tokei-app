@@ -10,8 +10,6 @@
     <TextClock
         android:id="@+id/date"
         android:fontFamily="serif"
-        android:textStyle="bold"
-        android:textFontWeight="600"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:format12Hour="M月d日(E)"
@@ -25,8 +23,6 @@
     <TextClock
         android:id="@+id/time"
         android:fontFamily="serif"
-        android:textStyle="bold"
-        android:textFontWeight="600"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:format12Hour="h:mm"
