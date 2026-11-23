@@ -18,7 +18,7 @@ public class ClockWidget extends AppWidgetProvider {
     static RemoteViews views(Context ctx) {
         RemoteViews rv = new RemoteViews(ctx.getPackageName(),
                 Prefs.is24(ctx) ? R.layout.widget_24 : R.layout.widget_12);
-        Intent i = new Intent(ctx, MainActivity.class);
+        Intent i = new Intent(ctx, CalendarActivity.class);
         i.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP);
         PendingIntent pi = PendingIntent.getActivity(ctx, 0, i,
                 PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_UPDATE_CURRENT);

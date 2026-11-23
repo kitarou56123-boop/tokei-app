@@ -11,21 +11,16 @@
         android:allowBackup="true">
 
         <activity
-            android:name=".MainActivity"
+            android:name=".CalendarActivity"
             android:exported="true"
             android:launchMode="singleTask"
-            android:theme="@android:style/Theme.Material.NoActionBar">
+            android:windowSoftInputMode="adjustResize"
+            android:theme="@android:style/Theme.Material.Light.NoActionBar">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
-
-        <activity
-            android:name=".CalendarActivity"
-            android:exported="false"
-            android:windowSoftInputMode="adjustResize"
-            android:theme="@android:style/Theme.Material.Light.NoActionBar" />
 
         <receiver
             android:name=".ClockWidget"

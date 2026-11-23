@@ -1,5 +1,6 @@
 package com.kitarou.tokei;
 
+import android.Manifest;
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.app.DatePickerDialog;
@@ -7,7 +8,11 @@ import android.app.TimePickerDialog;
 import android.graphics.Color;
 import android.graphics.Typeface;
 import android.graphics.drawable.GradientDrawable;
+import android.content.pm.PackageManager;
+import android.os.Build;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
 import android.text.TextUtils;
 import android.view.GestureDetector;
 import android.view.Gravity;
@@ -25,6 +30,7 @@ import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.YearMonth;
 import java.time.format.DateTimeFormatter;
+import java.util.Calendar;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -45,6 +51,16 @@ public class CalendarActivity extends Activity {
     private LinearLayout grid;
     private GestureDetector gd;
     private boolean flung;
+    private TextView ampmV, clockV, modeB;
+    private final Handler h = new Handler(Looper.getMainLooper());
+    private final Runnable tick = new Runnable() {
+        @Override
+        public void run() {
+            updateClock();
+            long now = System.currentTimeMillis();
+            h.postDelayed(this, 1000 - (now % 1000) + 2);
+        }
+    };
 
     private int dp(float v) {
         return Math.round(v * getResources().getDisplayMetrics().density);
@@ -53,6 +69,7 @@ public class CalendarActivity extends Activity {
     @Override
     protected void onCreate(Bundle b) {
         super.onCreate(b);
+        getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
         getWindow().setStatusBarColor(Color.WHITE);
         getWindow().setNavigationBarColor(Color.WHITE);
         getWindow().getDecorView().setSystemUiVisibility(
@@ -72,6 +89,11 @@ public class CalendarActivity extends Activity {
         titleV.setTypeface(Typeface.DEFAULT_BOLD);
         titleV.setTextColor(0xFF444444);
         head.addView(titleV, new LinearLayout.LayoutParams(0, -2, 1));
+        TextView todayB = navButton("今日", v -> { shown = YearMonth.now(); render(); });
+        todayB.setTextSize(17);
+        todayB.setTextColor(RED);
+        todayB.setLayoutParams(new LinearLayout.LayoutParams(dp(64), dp(48)));
+        head.addView(todayB);
         head.addView(navButton("◀", v -> { shown = shown.minusMonths(1); render(); }));
         head.addView(navButton("▶", v -> { shown = shown.plusMonths(1); render(); }));
         root.addView(head);
@@ -98,15 +120,46 @@ public class CalendarActivity extends Activity {
         grid.setPadding(1, 1, 0, 0);
         root.addView(grid, new LinearLayout.LayoutParams(-1, 0, 1));
 
-        // 下のボタン
+        // 下：秒まで出る時計と 24時間切替
+        View top = new View(this);
+        top.setBackgroundColor(LINE);
+        root.addView(top, new LinearLayout.LayoutParams(-1, 1));
         LinearLayout bar = new LinearLayout(this);
         bar.setOrientation(LinearLayout.HORIZONTAL);
+        bar.setGravity(Gravity.CENTER_VERTICAL);
         bar.setBackgroundColor(0xFFF7F7F7);
-        bar.setPadding(dp(8), dp(6), dp(8), dp(6));
-        bar.addView(barButton("今日", TEXT, v -> { shown = YearMonth.now(); render(); }),
-                new LinearLayout.LayoutParams(0, dp(52), 1));
-        bar.addView(barButton("＋ 予定を追加", RED, v -> showEdit(null, LocalDate.now())),
-                new LinearLayout.LayoutParams(0, dp(52), 1));
+        bar.setPadding(dp(16), dp(8), dp(12), dp(10));
+
+        ampmV = new TextView(this);
+        ampmV.setTextSize(16);
+        ampmV.setTextColor(0xFF666666);
+        ampmV.setPadding(0, 0, dp(6), 0);
+        bar.addView(ampmV);
+
+        clockV = new TextView(this);
+        clockV.setTextSize(46);
+        clockV.setTextColor(0xFF222222);
+        clockV.setTypeface(Typeface.create("sans-serif-light", Typeface.NORMAL));
+        clockV.setFontFeatureSettings("tnum");
+        clockV.setSingleLine(true);
+        clockV.setIncludeFontPadding(false);
+        bar.addView(clockV, new LinearLayout.LayoutParams(0, -2, 1));
+
+        modeB = new TextView(this);
+        modeB.setTextSize(15);
+        modeB.setTextColor(TEXT);
+        modeB.setGravity(Gravity.CENTER);
+        GradientDrawable mbg = new GradientDrawable();
+        mbg.setColor(Color.WHITE);
+        mbg.setStroke(dp(1), 0xFFBBBBBB);
+        mbg.setCornerRadius(dp(24));
+        modeB.setBackground(mbg);
+        modeB.setOnClickListener(v -> {
+            Prefs.set24(this, !Prefs.is24(this));
+            ClockWidget.updateAll(this);
+            updateClock();
+        });
+        bar.addView(modeB, new LinearLayout.LayoutParams(dp(112), dp(48)));
         root.addView(bar);
 
         setContentView(root);
@@ -126,13 +179,46 @@ public class CalendarActivity extends Activity {
             }
         });
 
+        Notifier.schedule(this);
+        ClockWidget.updateAll(this);
+        if (Build.VERSION.SDK_INT >= 33
+                && checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+            requestPermissions(new String[]{Manifest.permission.POST_NOTIFICATIONS}, 1);
+        }
         openFromIntent();
+    }
+
+    private void updateClock() {
+        Calendar c = Calendar.getInstance();
+        boolean is24 = Prefs.is24(this);
+        int hh = c.get(Calendar.HOUR_OF_DAY);
+        int shownH = hh;
+        if (is24) {
+            ampmV.setVisibility(View.GONE);
+        } else {
+            shownH = hh % 12;
+            if (shownH == 0) shownH = 12;
+            ampmV.setText(hh < 12 ? "午前" : "午後");
+            ampmV.setVisibility(View.VISIBLE);
+        }
+        clockV.setText(String.format(Locale.US, "%d:%02d:%02d", shownH, c.get(Calendar.MINUTE), c.get(Calendar.SECOND)));
+        modeB.setText(is24 ? "24時間表示" : "12時間表示");
+    }
+
+    @Override
+    protected void onPause() {
+        super.onPause();
+        h.removeCallbacks(tick);
     }
 
     @Override
     protected void onNewIntent(android.content.Intent intent) {
         super.onNewIntent(intent);
         setIntent(intent);
+        if (intent.getStringExtra("date") == null) {
+            shown = YearMonth.now();
+            render();
+        }
         openFromIntent();
     }
 
@@ -154,6 +240,8 @@ public class CalendarActivity extends Activity {
     protected void onResume() {
         super.onResume();
         render();
+        h.removeCallbacks(tick);
+        tick.run();
     }
 
     @Override

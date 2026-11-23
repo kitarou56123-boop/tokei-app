@@ -2,5 +2,5 @@
 <resources>
     <string name="app_name">とけい</string>
     <string name="widget_name">とけい（ホーム画面の時計）</string>
-    <string name="widget_desc">タップすると秒まで表示</string>
+    <string name="widget_desc">タップするとカレンダーと秒表示</string>
 </resources>
