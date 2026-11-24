@@ -56,6 +56,38 @@ final class EventStore {
         Prefs.sp(c).edit().putString("events", a.toString()).apply();
     }
 
+    /** バックアップ用：全部の予定を文字にする */
+    static String exportJson(Context c) {
+        return Prefs.sp(c).getString("events", "[]");
+    }
+
+    /** バックアップの読み込み：同じ予定は重ねずに足す。足した件数を返す */
+    static int importJson(Context c, String json) throws Exception {
+        JSONArray a = new JSONArray(json.trim());
+        List<Ev> list = all(c);
+        java.util.Set<String> have = new java.util.HashSet<>();
+        for (Ev e : list) have.add(e.id + "|" + e.date + "|" + e.min + "|" + e.text);
+        java.util.Set<Long> ids = new java.util.HashSet<>();
+        for (Ev e : list) ids.add(e.id);
+        int added = 0;
+        for (int i = 0; i < a.length(); i++) {
+            JSONObject o = a.getJSONObject(i);
+            Ev e = new Ev();
+            e.id = o.getLong("id");
+            e.date = o.getString("date");
+            e.min = o.optInt("min", -1);
+            e.text = o.optString("text", "");
+            java.time.LocalDate.parse(e.date);
+            if (have.contains(e.id + "|" + e.date + "|" + e.min + "|" + e.text)) continue;
+            while (ids.contains(e.id)) e.id++;
+            ids.add(e.id);
+            list.add(e);
+            added++;
+        }
+        saveAll(c, list);
+        return added;
+    }
+
     static void sort(List<Ev> list) {
         Collections.sort(list, (x, y) -> {
             int d = x.date.compareTo(y.date);

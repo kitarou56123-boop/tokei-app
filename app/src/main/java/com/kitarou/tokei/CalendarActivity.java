@@ -8,7 +8,14 @@ import android.app.TimePickerDialog;
 import android.graphics.Color;
 import android.graphics.Typeface;
 import android.graphics.drawable.GradientDrawable;
+import android.content.Intent;
 import android.content.pm.PackageManager;
+import android.net.Uri;
+import android.widget.Toast;
+import java.io.BufferedReader;
+import java.io.InputStreamReader;
+import java.io.OutputStream;
+import java.nio.charset.StandardCharsets;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
@@ -86,7 +93,7 @@ public class CalendarActivity extends Activity {
         head.setGravity(Gravity.CENTER_VERTICAL);
         head.setPadding(dp(16), dp(8), dp(8), dp(8));
         titleV = new TextView(this);
-        titleV.setTextSize(26);
+        titleV.setTextSize(24);
         titleV.setTypeface(Typeface.DEFAULT_BOLD);
         titleV.setTextColor(0xFF444444);
         head.addView(titleV, new LinearLayout.LayoutParams(0, -2, 1));
@@ -97,6 +104,10 @@ public class CalendarActivity extends Activity {
         head.addView(todayB);
         head.addView(navButton("◀", v -> { shown = shown.minusMonths(yearMode ? 12 : 1); render(); }));
         head.addView(navButton("▶", v -> { shown = shown.plusMonths(yearMode ? 12 : 1); render(); }));
+        TextView menuB = navButton("⋮", v -> showMenu());
+        menuB.setTextSize(24);
+        menuB.setLayoutParams(new LinearLayout.LayoutParams(dp(36), dp(48)));
+        head.addView(menuB);
         root.addView(head);
 
         // 曜日
@@ -274,7 +285,7 @@ public class CalendarActivity extends Activity {
         t.setTextSize(22);
         t.setTextColor(0xFF666666);
         t.setGravity(Gravity.CENTER);
-        t.setLayoutParams(new LinearLayout.LayoutParams(dp(56), dp(48)));
+        t.setLayoutParams(new LinearLayout.LayoutParams(dp(48), dp(48)));
         t.setOnClickListener(l);
         return t;
     }
@@ -288,6 +299,66 @@ public class CalendarActivity extends Activity {
         t.setGravity(Gravity.CENTER);
         t.setOnClickListener(l);
         return t;
+    }
+
+    // ---- 予定のバックアップ（機種変更用） ----
+    private static final int REQ_SAVE = 11, REQ_LOAD = 12;
+
+    private void showMenu() {
+        String[] items = {"予定を書き出す（機種変更の前に）", "予定を読み込む（新しいスマホで）"};
+        new AlertDialog.Builder(this)
+                .setTitle("予定の引っ越し")
+                .setItems(items, (dlg, which) -> {
+                    if (which == 0) {
+                        Intent i = new Intent(Intent.ACTION_CREATE_DOCUMENT);
+                        i.addCategory(Intent.CATEGORY_OPENABLE);
+                        i.setType("application/json");
+                        i.putExtra(Intent.EXTRA_TITLE, "とけい予定_" + LocalDate.now() + ".json");
+                        startActivityForResult(i, REQ_SAVE);
+                    } else {
+                        Intent i = new Intent(Intent.ACTION_OPEN_DOCUMENT);
+                        i.addCategory(Intent.CATEGORY_OPENABLE);
+                        i.setType("*/*");
+                        startActivityForResult(i, REQ_LOAD);
+                    }
+                })
+                .setNegativeButton("閉じる", null)
+                .show();
+    }
+
+    @Override
+    protected void onActivityResult(int req, int res, Intent data) {
+        super.onActivityResult(req, res, data);
+        if (res != RESULT_OK || data == null || data.getData() == null) return;
+        Uri uri = data.getData();
+        if (req == REQ_SAVE) {
+            try (OutputStream os = getContentResolver().openOutputStream(uri, "wt")) {
+                os.write(EventStore.exportJson(this).getBytes(StandardCharsets.UTF_8));
+                int n = EventStore.all(this).size();
+                new AlertDialog.Builder(this)
+                        .setMessage(n + "件の予定を書き出しました。\n新しいスマホで「予定を読み込む」から、このファイルを選んでください。")
+                        .setPositiveButton("OK", null).show();
+            } catch (Exception e) {
+                Toast.makeText(this, "書き出しに失敗しました", Toast.LENGTH_LONG).show();
+            }
+        } else if (req == REQ_LOAD) {
+            try (BufferedReader br = new BufferedReader(new InputStreamReader(
+                    getContentResolver().openInputStream(uri), StandardCharsets.UTF_8))) {
+                StringBuilder sb = new StringBuilder();
+                String line;
+                while ((line = br.readLine()) != null) sb.append(line).append('\n');
+                int n = EventStore.importJson(this, sb.toString());
+                render();
+                if (Notifier.pastNotifyTime()) Notifier.postTomorrow(this);
+                new AlertDialog.Builder(this)
+                        .setMessage(n + "件の予定を読み込みました。")
+                        .setPositiveButton("OK", null).show();
+            } catch (Exception e) {
+                new AlertDialog.Builder(this)
+                        .setMessage("読み込めませんでした。\n「とけい予定_日付.json」というファイルを選んでください。")
+                        .setPositiveButton("OK", null).show();
+            }
+        }
     }
 
     private TextView pillButton() {
